@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <capwords/>
+    <capwords :groups="groups" @complete="complete"/>
   </div>
 </template>
 
@@ -11,6 +11,21 @@ export default {
   name: 'App',
   components: {
     capwords
+  },
+  data(){
+    return {
+        groups: [
+            {
+                answer: '烟瘾每次发作只会持续三分钟',
+                words: ['至','烟瘾','三分','续','持','戒烟','发','次','容易','会','钟','只会','每','作','克服']
+            }
+        ]
+    }
+  },
+  methods: {
+    complete(sender){
+        console.log(sender);
+    }
   }
 }
 </script>
@@ -36,6 +51,10 @@ html,body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+body {
+    background-image: url(./assets/capwords.gif);
+    background-size: cover;
+}
 
 .flex {
     display: flex;
