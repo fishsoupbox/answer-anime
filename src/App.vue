@@ -1,11 +1,11 @@
 <template>
   <div id="app">
-    <capwords :groups="groups" @complete="complete"/>
+    <capwords :groups="groups" @complete="complete" @completeall="completeall"/>
   </div>
 </template>
 
 <script>
-import capwords from './components/capwords.vue'
+import capwords from './components/capwords.vue';
 
 export default {
   name: 'App',
@@ -18,12 +18,30 @@ export default {
             {
                 answer: '烟瘾每次发作只会持续三分钟',
                 words: ['至','烟瘾','三分','续','持','戒烟','发','次','容易','会','钟','只会','每','作','克服']
+            },
+            {
+                answer: '辛勤的蜜蜂永没有时间悲哀',
+                words: ['的','辛勤','三分','续','永','蜜蜂','发','次','没有','会','钟','时间','每','悲哀']
             }
         ]
     }
   },
   methods: {
+    /**
+     * 每道题目完成时回调
+     * 所有题目全部完成时回调
+     */
     complete(sender){
+        // subject 题目下标
+        // 输出 finish 代表所有题目都已完成
+        console.log(sender);
+    },
+
+    /**
+     * 所有题目答题完成后，点击回调
+     */
+    completeall(sender){
+        // subject 题目下标
         console.log(sender);
     }
   }

@@ -1,5 +1,6 @@
 <template>
     <div class="capwords flex">
+        <div class="capwords-pre"><img src="../assets/log.png" alt=""></div>
         <div class="capwords-proe flex">
             <div class="control flex center">
                 <div class="procress">
@@ -16,16 +17,17 @@
                 <h1>选下方文字填补上方空白</h1>
                 <div class="panel-entry flex">
                     <div class="entry-subject">
-                        <div class="entry-result" ref="entryResult">
-                            <div class="entry-cate"></div>
+                        <div class="entry-result" :style="{height: resultHeight}">
+                            <div class="entry-cate" ref="entryResult"></div>
+                            <div class="entry-right iconfont icon-duigou" :class="{'entry-right-complate': state}"></div>
                         </div>
                     </div>
                     <div class="entry-subject">
                         <div class="entry-write">{{answer}}</div>
                     </div>
                     <div class="entry-group flex">
-                        <div class="entry-label" :class="{'disabled': item.undisabled, 'checked': item.undisabled }" v-for="(item, index) in words" :key="index">
-                            <div class="design-button" :ref="'designButton' + index" @click="addResult(index)">{{item.name}}</div>
+                        <div class="entry-label" :class="{'disabled': item.undisabled, 'checked': item.clickstate, 'complate': item.isanswer }" v-for="(item, index) in words" :key="index">
+                            <div class="design-button" :ref="'designButton' + index" :style="{transform: 'translate('+ item.trans.x +'px, '+ item.trans.y +'px)'}" @click="addResult(index)">{{item.name}}</div>
                         </div>
                     </div>
 
@@ -35,11 +37,13 @@
                 <div class="design-button light" :class="{disable: !operate}">检查</div>
             </div> -->
         </div>
+        <div class="capwords-ppop" v-if="state" @click="setOneQuest"></div>
+        <audio src="../assets/999a222ae9ff4f98bed3d15bea16527b.mp3" ref="audio"></audio>
     </div>
 </template>
 
 <script>
-    let entryX = 0, entryY = 0;
+    import TWEEN from "@tweenjs/tween.js";
 
     export default {
         name: 'HelloWorld',
@@ -51,18 +55,24 @@
         },
         data(){
             return {
-                // 当前题目下标
-                qesIndex: 0,
-                // 题目总个数
-                allGroupNum: 1,
-                // 计算属性
+                qesIndex: 0,        // 当前题目下标
+                allGroupNum: 1,     // 题目总个数
                 entry: {},
                 calcsize: [],
+
                 // 实际输入项
                 answer: "我喜欢你手机中的小猫",
                 words: ['电脑','欢','你','小猫','喜','我','小狗', '中','的','手机'],
-                result: [],
-                resultIdx: []
+
+                result: [],         // 每次选择时存储的字符组
+                resultIdx: [],      // 每次选择时存储的下标组
+
+                averagenum: 0,      // 进度条当前提目下标动画参数
+                state: false,       // 每个题目完成时的状态判断
+
+                entryX: 0,
+                entryY: 0,
+                line: 0
             }
         },
         computed: {
@@ -73,7 +83,10 @@
                 return this.result.length;
             },
             average(){
-                return parseInt(this.qesIndex / this.allGroupNum * 100) + '%'
+                return parseInt(this.averagenum / this.allGroupNum * 100) + '%'
+            },
+            resultHeight(){
+                return this.entry.height + this.entryY + 'px'
             }
         },
         watch:{
@@ -91,10 +104,20 @@
              */
             setOneQuest(){
                 const qesIndex = this.qesIndex;
+
+                const initstate = this.initPage();
+
+                if(initstate){
+                    this.$emit('completeall', {
+                        subject: qesIndex
+                    });
+                    console.log("没有下一题了");
+                    return;
+                }
+
                 let answer = this.groups[qesIndex].answer;
                 let words = this.groups[qesIndex].words;
-
-                this.initPage();
+                
 
                 if(typeof(words) === 'string'){
                     words = words.split(",");
@@ -104,6 +127,8 @@
                     word.name = item;
                     word.clickstate = false;
                     word.undisabled = false;
+                    word.isanswer = false;
+                    word.trans = {x: 0, y: 0};
                     return word;
                 })
 
@@ -116,24 +141,50 @@
             initPage(){
                 this.calcsize = [];
                 this.result = [];
-                entryX = 0;
-                entryY = 0;
+                this.entryX = 0;
+                this.entryY = 0;
+                this.line = 0;
+
+                this.state = false;
+
+                // 完成所有答题时
+                if(this.qesIndex > this.allGroupNum - 1){
+                    return true;
+                }
+                return false;
             },
             /**
              * 完成题目
              */
             complate(){
                 const qesIndex = this.qesIndex + 1;
+                this.qesIndex = qesIndex;
 
-                this.$emit('complate');
                 
-                // 答题完成
+                // 滚动条效果
+                const size = {
+                    average: this.averagenum
+                }
+                const tween = new TWEEN.Tween(size).to({ average: qesIndex }, 300).easing(TWEEN.Easing.Quadratic.Out).onUpdate(()=>{
+                    this.averagenum = size.average;
+                }).start();
+
+                // 播放音频
+                this.$refs.audio.play();
+                
+
+                // 完成所有答题时
                 if(qesIndex > this.allGroupNum - 1){
-                    this.$emit('complateall');
+                    this.$emit('complate', {
+                        subject: qesIndex,
+                        finish: true
+                    });
                     return;
                 }
 
-                this.qesIndex = qesIndex;
+                this.$emit('complate', {
+                    subject: qesIndex
+                });
             },
             /**
              * 判断输入框中按钮
@@ -141,14 +192,14 @@
             checkWords(index){
                 const word = this.words[index];
                 // 如果点击的按钮是输入框中的或者按钮被禁用的情况，阻止
-                if(word.clickstate && word.undisabled){
+                if((word.clickstate && word.undisabled) || word.isanswer){
                     return true;
                 }
                 const answer = this.answer.substring(this.result.join('').length);
 
                 if(new RegExp('^' + word.name).test(answer)){
-                    console.log(word.name);
                     this.result.push(word.name);
+                    word.isanswer = true;
                 }else{
                     if(!new RegExp(word.name).test(answer)){
                         word.undisabled = true;
@@ -156,8 +207,9 @@
                     word.clickstate = true;
                     return true;
                 }
+                word.clickstate = true;
 
-                this.words = words;
+                this.words[index] = word;
                 
                 return false;
             },
@@ -166,7 +218,6 @@
              * 输入框中添加按钮
              */
             addResult(index){
-
                 if(this.checkWords(index)){
                     return;
                 }
@@ -182,33 +233,48 @@
                 
                 if(this.result.length){
                     const lastResult = this.calcsize[this.result.length - 1];
-                    x = x + entryX;
+                    x = x + this.entryX;
                 }
 
                 //如果超出当前行则换行
-                if(entryX + designButton.width > entry.width){
+                if(this.entryX + designButton.width > entry.width){
                     x = entry.x - designButton.x;
-                    entryY = entryY + designButton.height;
-                    entryX = 0;
+                    this.entryY = this.entryY + designButton.height;
+                    this.entryX = 0;
+                    this.line = this.line + 1;
+
+                    this.words = this.words.map((item)=>{
+                        if(item.isanswer){
+                            item.trans.y = item.trans.y - designButton.height * this.line;
+                        }
+                        return item;
+                    })
+
                 }
-                entryX = entryX + designButton.width;
+                this.entryX = this.entryX + designButton.width;
 
-                y = y + entryY;
+                y = y + this.entryY - designButton.height * this.line;
 
-                this.$refs['designButton' + index][0].style.transform = "translate("+x+"px, "+y+"px)";
+                this.words[index].trans = {x, y};
 
                 this.calcsize.push(designButton);
                 this.resultIdx.push(index);
 
                 if(this.answer === this.result.join("")){
-                    debugger;
+                    this.state = true;
                     this.complate();
                 }
+            },
+            tweenAnimate(){
+                TWEEN.update();
+                requestAnimationFrame(this.tweenAnimate);
             }
         },
         mounted(){
             const entryResult = this.entryResult.getBoundingClientRect();
             this.entry = entryResult;
+            this.averagenum = this.qesIndex;
+            this.tweenAnimate();
         }
     }
 </script>
@@ -219,7 +285,6 @@
         max-width: 750px;
         padding: 1.2rem;
         max-height: 80vh;
-        overflow: hidden;
         width: 100%;
         bottom: 0;
         position: absolute;
@@ -227,6 +292,20 @@
         background-color: #ffffff;
         border-radius: 1rem;
         transform: translateX(-50%);
+        .capwords-pre {
+            position: absolute;
+            height: 8rem;
+            width: 8rem;
+            padding: .5rem;
+            border-radius: 50%;
+            background-color: #ffffff;
+            left: 50%;
+            margin-left: -4rem;
+            top: -4rem;
+            img {
+                width: 100%;
+            }
+        }
         .capwords-proe {
             flex-direction: column;
             justify-content: space-between;
@@ -234,8 +313,15 @@
             border-radius: 1rem;
             padding: 1.2rem;
         }
+        .capwords-ppop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 5;
+        }
     }
-
 
     .control {
         padding: 0 1.8rem;
@@ -301,13 +387,29 @@
                 margin-bottom: 1.4rem;
             }
             .entry-result {
-                
-            }
-            .entry-cate {
                 box-shadow: 0px 2px 3px 1px rgba(70, 47, 5, .1);
                 background-color: #ffffff;
                 border-radius: 6px;
                 height: 3.8rem;
+                padding-right: 4rem;
+                position: relative;
+            }
+            .entry-cate {
+                height: 100%;
+                width: 100%;
+            }
+            .entry-right {
+                position: absolute;
+                right: 1rem;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #28e879;
+                opacity: 0;
+                transition: opacity .1s;
+                &.entry-right-complate {
+                    opacity: 1;
+                    transition: opacity .2s;
+                }
             }
             .entry-write {
                 font-size: 1.4rem;
@@ -326,7 +428,23 @@
                 margin: .7rem;
                 .design-button {
                     padding: 0.8rem 1.4rem;
+                    transition: all .2s;
                 }
+                &:active {
+                    box-shadow: 0px 1px 1px 0px rgba(70,47,5,.1);
+                }
+                &.complate:active {
+                    box-shadow: 0px 2px 3px 1px rgba(70, 47, 5, .1);
+                }
+                &.disabled {
+                    box-shadow: 0 0 0 rgba(0,0,0,0);
+                    .design-button {
+                        transition: all .3s;
+                        background-color: #af2525;
+                        color: #eeeeee;
+                    }
+                }
+                
             }
         }
     }
