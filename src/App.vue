@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <capwords :groups="groups" @complete="complete" @completeall="completeall"/>
+    <capwords :groups="groups" @complate="complate" @complateall="complateall"/>
   </div>
 </template>
 
@@ -31,8 +31,9 @@ export default {
      * 每道题目完成时回调
      * 所有题目全部完成时回调
      */
-    complete(sender){
-        // subject 题目下标
+    complate(sender){
+        // index 题目下标
+        // result 结果数组
         // 输出 finish 代表所有题目都已完成
         console.log(sender);
     },
@@ -40,8 +41,9 @@ export default {
     /**
      * 所有题目答题完成后，点击回调
      */
-    completeall(sender){
-        // subject 题目下标
+    complateall(sender){
+        // index 题目下标
+        // result 结果数组
         console.log(sender);
     }
   }

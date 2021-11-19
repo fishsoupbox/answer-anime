@@ -108,8 +108,9 @@
                 const initstate = this.initPage();
 
                 if(initstate){
-                    this.$emit('completeall', {
-                        subject: qesIndex
+                    this.$emit('complateall', {
+                        index: qesIndex,
+                        result: this.result
                     });
                     console.log("没有下一题了");
                     return;
@@ -176,14 +177,16 @@
                 // 完成所有答题时
                 if(qesIndex > this.allGroupNum - 1){
                     this.$emit('complate', {
-                        subject: qesIndex,
+                        index: qesIndex,
+                        result: this.result,
                         finish: true
                     });
                     return;
                 }
 
                 this.$emit('complate', {
-                    subject: qesIndex
+                    index: qesIndex,
+                    result: this.result
                 });
             },
             /**
