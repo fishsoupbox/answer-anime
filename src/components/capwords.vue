@@ -27,10 +27,9 @@
                     </div>
                     <div class="entry-group flex">
                         <div class="entry-label" :class="{'disabled': item.undisabled, 'checked': item.clickstate, 'complate': item.isanswer }" v-for="(item, index) in words" :key="index">
-                            <div class="design-button" :ref="'designButton' + index" :style="{transform: 'translate('+ item.trans.x +'px, '+ item.trans.y +'px)'}" @click="addResult(index)">{{item.name}}</div>
+                            <div class="design-button" :ref="'designButton' + index" :style="{transform: 'translate('+ item.trans.x +'px, '+ item.trans.y +'px)'}" @touchstart="addState(index)" @click="addResult(index)">{{item.name}}</div>
                         </div>
                     </div>
-
                 </div>
             </div>
             <!-- <div class="operate">
@@ -44,6 +43,9 @@
 
 <script>
     import TWEEN from "@tweenjs/tween.js";
+
+    const randomsort = (a, b) => { return Math.random() > .5 ? -1 : 1; };
+    let entryInty = null;
 
     export default {
         name: 'HelloWorld',
@@ -62,7 +64,7 @@
 
                 // 实际输入项
                 answer: "我喜欢你手机中的小猫",
-                words: ['电脑','欢','你','小猫','喜','我','小狗', '中','的','手机'],
+                words: ['欢','你','小猫','喜','我','中','的','手机'],
 
                 result: [],         // 每次选择时存储的字符组
                 resultIdx: [],      // 每次选择时存储的下标组
@@ -95,7 +97,7 @@
                     this.allGroupNum = newV.length;
                     this.setOneQuest();
                 },
-                immediate: true    
+                immediate: true
             }
         },
         methods: {
@@ -108,21 +110,35 @@
                 const initstate = this.initPage();
 
                 if(initstate){
+                    this.words = this.words.map((item, index)=>{
+                        item.clickstate = false;
+                        item.undisabled = false;
+                        item.isanswer = false;
+                        item.trans = {x: 0, y: 0};
+                        return item;
+                    })
                     this.$emit('complateall', {
                         index: qesIndex,
                         result: this.result
                     });
-                    console.log("没有下一题了");
                     return;
                 }
 
-                let answer = this.groups[qesIndex].answer;
-                let words = this.groups[qesIndex].words;
-                
+                let group = this.groups[qesIndex], answer = group, words = null;
 
-                if(typeof(words) === 'string'){
-                    words = words.split(",");
+                // 判断group每一项是否为string
+                if(typeof(group) === 'string'){
+                    const _words = answer.split("");
+                    words = _words.sort(randomsort);
+                }else{
+                    answer = group.answer;
+                    words = group.words;
+                    if(typeof(words) === 'string'){
+                        words = words.split(",");
+                    }
                 }
+
+                
                 words = words.map((item, index)=>{
                     const word = {};
                     word.name = item;
@@ -147,6 +163,14 @@
                 this.line = 0;
 
                 this.state = false;
+                if(this.qesIndex > 0){
+                    setTimeout(()=>{
+                        const entryResult = this.entryResult.getBoundingClientRect();
+                        entryResult.height = entryInty.height;
+                        this.entry = entryResult;
+                    }, 600)
+                }
+
 
                 // 完成所有答题时
                 if(this.qesIndex > this.allGroupNum - 1){
@@ -195,7 +219,7 @@
             checkWords(index){
                 const word = this.words[index];
                 // 如果点击的按钮是输入框中的或者按钮被禁用的情况，阻止
-                if((word.clickstate && word.undisabled) || word.isanswer){
+                if(word.undisabled || word.isanswer){
                     return true;
                 }
                 const answer = this.answer.substring(this.result.join('').length);
@@ -207,10 +231,13 @@
                     if(!new RegExp(word.name).test(answer)){
                         word.undisabled = true;
                     }
-                    word.clickstate = true;
+                    word.clickstate = false;
+                    this.words[index] = word;
+
                     return true;
                 }
-                word.clickstate = true;
+
+                word.clickstate = false;
 
                 this.words[index] = word;
                 
@@ -242,13 +269,13 @@
                 //如果超出当前行则换行
                 if(this.entryX + designButton.width > entry.width){
                     x = entry.x - designButton.x;
+                    this.line = this.line + 1;
                     this.entryY = this.entryY + designButton.height;
                     this.entryX = 0;
-                    this.line = this.line + 1;
 
                     this.words = this.words.map((item)=>{
                         if(item.isanswer){
-                            item.trans.y = item.trans.y - designButton.height * this.line;
+                            item.trans.y = item.trans.y - designButton.height;
                         }
                         return item;
                     })
@@ -256,7 +283,7 @@
                 }
                 this.entryX = this.entryX + designButton.width;
 
-                y = y + this.entryY - designButton.height * this.line;
+                y = y - this.entryY + designButton.height * this.line;
 
                 this.words[index].trans = {x, y};
 
@@ -268,6 +295,15 @@
                     this.complate();
                 }
             },
+            addState(index){
+                const word = this.words[index];
+                const answer = this.answer.substring(this.result.join('').length);
+                if(!new RegExp('^' + word.name).test(answer)){
+                    word.clickstate = true;
+                }
+
+                this.words[index] = word;
+            },
             tweenAnimate(){
                 TWEEN.update();
                 requestAnimationFrame(this.tweenAnimate);
@@ -275,7 +311,7 @@
         },
         mounted(){
             const entryResult = this.entryResult.getBoundingClientRect();
-            this.entry = entryResult;
+            this.entry = entryInty = entryResult;
             this.averagenum = this.qesIndex;
             this.tweenAnimate();
         }
@@ -286,25 +322,26 @@
     @import url(../assets/font/iconfont.css);
     .capwords {
         max-width: 750px;
-        padding: 1.2rem;
+        padding: 1.2em;
         max-height: 80vh;
         width: 100%;
         bottom: 0;
         position: absolute;
         left: 50%;
         background-color: #ffffff;
-        border-radius: 1rem;
+        border-radius: 10px;
         transform: translateX(-50%);
+        font-size: 10px;
         .capwords-pre {
             position: absolute;
-            height: 8rem;
-            width: 8rem;
-            padding: .5rem;
+            height: 8em;
+            width: 8em;
+            padding: .5em;
             border-radius: 50%;
             background-color: #ffffff;
             left: 50%;
-            margin-left: -4rem;
-            top: -4rem;
+            margin-left: -4em;
+            top: -4em;
             img {
                 width: 100%;
             }
@@ -313,8 +350,8 @@
             flex-direction: column;
             justify-content: space-between;
             background-color: #f1f1f1;
-            border-radius: 1rem;
-            padding: 1.2rem;
+            border-radius: 1em;
+            padding: 1.2em;
         }
         .capwords-ppop {
             position: absolute;
@@ -327,11 +364,11 @@
     }
 
     .control {
-        padding: 0 1.8rem;
-        margin-top: 3rem;
+        padding: 0 1.8em;
+        margin-top: 3em;
         .procress {
             position: relative;
-            height: 1.8rem;
+            height: 1.8em;
             flex: 1 0 auto;
             border: 2px solid #ffffff;
             border-radius: 50px;
@@ -362,7 +399,7 @@
                 background-color: #ec3656;
                 box-shadow: 0px 0px 5px rgba(0,0,0,.3) inset;
                 height: 100%;
-                padding: 0.4rem 0.6rem;
+                padding: 0.4em 0.6em;
                 position: absolute;
                 top: 0;
                 min-width: 1%;
@@ -372,13 +409,13 @@
         }
     }
     .panel {
-        padding: 2rem 0;
+        padding: 2em 0;
         flex-direction: column;
         h1 {
             color: #000;
-            font-size: 1.8rem;
+            font-size: 1.8em;
             font-weight: 400;
-            margin-bottom: 1.8rem;
+            margin-bottom: 1.8em;
             font-weight: 700;
             text-align: center;
         }
@@ -387,14 +424,14 @@
             justify-content: center;
             flex-direction: column;
             .entry-subject {
-                margin-bottom: 1.4rem;
+                margin-bottom: 1.4em;
             }
             .entry-result {
                 box-shadow: 0px 2px 3px 1px rgba(70, 47, 5, .1);
                 background-color: #ffffff;
                 border-radius: 6px;
-                height: 3.8rem;
-                padding-right: 4rem;
+                height: 3.8em;
+                padding-right: 4em;
                 position: relative;
             }
             .entry-cate {
@@ -403,7 +440,7 @@
             }
             .entry-right {
                 position: absolute;
-                right: 1rem;
+                right: 1em;
                 top: 50%;
                 transform: translateY(-50%);
                 color: #28e879;
@@ -415,7 +452,7 @@
                 }
             }
             .entry-write {
-                font-size: 1.4rem;
+                font-size: 1.4em;
                 color: #000000;
                 text-align: center;
                 font-weight: 700;
@@ -428,9 +465,9 @@
                 box-shadow: 0px 2px 3px 1px rgba(70, 47, 5, .1);
                 background-color: #d6d6d6;
                 border-radius: 6px;
-                margin: .7rem;
+                margin: .7em;
                 .design-button {
-                    padding: 0.8rem 1.4rem;
+                    padding: 0.5em 1.0em;
                     transition: all .2s;
                 }
                 &:active {
@@ -443,6 +480,13 @@
                     box-shadow: 0 0 0 rgba(0,0,0,0);
                     .design-button {
                         transition: all .3s;
+                        background-color: #af2525;
+                        color: #eeeeee;
+                    }
+                }
+                &.checked:hover, &.checked:checked {
+                    .design-button {
+                        transition: none;
                         background-color: #af2525;
                         color: #eeeeee;
                     }
