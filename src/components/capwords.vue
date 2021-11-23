@@ -352,6 +352,7 @@
             background-color: #f1f1f1;
             border-radius: 1em;
             padding: 1.2em;
+            flex: 1;
         }
         .capwords-ppop {
             position: absolute;
@@ -473,9 +474,6 @@
                 &:active {
                     box-shadow: 0px 1px 1px 0px rgba(70,47,5,.1);
                 }
-                &.complate:active {
-                    box-shadow: 0px 2px 3px 1px rgba(70, 47, 5, .1);
-                }
                 &.disabled {
                     box-shadow: 0 0 0 rgba(0,0,0,0);
                     .design-button {
@@ -489,6 +487,13 @@
                         transition: none;
                         background-color: #af2525;
                         color: #eeeeee;
+                    }
+                }
+                &.complate:hover, &.complate:active {
+                    box-shadow: 0px 2px 3px 1px rgba(70, 47, 5, .1);
+                    .design-button {
+                        background-color: #ffffff;
+                        color: #000000;
                     }
                 }
                 
